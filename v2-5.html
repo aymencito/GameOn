@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090d0f"><title>GameOn 2.5</title><style>html,body{margin:0;width:100%;height:100%;background:#090d0f;overflow:hidden}iframe{border:0;width:100%;height:100%;display:block;background:#090d0f}</style></head><body><iframe id="app" title="GameOn"></iframe><script>
+const frame=document.getElementById('app');
+frame.src='/v2-4.html'+location.search;
+frame.addEventListener('load',()=>{
+  try{
+    const d=frame.contentDocument;
+    if(d.querySelector('script[data-gameon-detail-fix]')) return;
+    const s=d.createElement('script');
+    s.src='/gameon-2.4-detail-fix.js?v=1';
+    s.dataset.gameonDetailFix='1';
+    d.body.appendChild(s);
+  }catch(e){console.error('GameOn patch load failed',e)}
+});
+</script></body></html>
