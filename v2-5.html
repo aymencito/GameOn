@@ -4,11 +4,18 @@ frame.src='/v2-4.html'+location.search;
 frame.addEventListener('load',()=>{
   try{
     const d=frame.contentDocument;
-    if(d.querySelector('script[data-gameon-detail-fix]')) return;
-    const s=d.createElement('script');
-    s.src='/gameon-2.4-detail-fix.js?v=1';
-    s.dataset.gameonDetailFix='1';
-    d.body.appendChild(s);
+    if(!d.querySelector('script[data-gameon-detail-fix]')){
+      const s=d.createElement('script');
+      s.src='/gameon-2.4-detail-fix.js?v=2';
+      s.dataset.gameonDetailFix='1';
+      d.body.appendChild(s);
+    }
+    if(!d.querySelector('script[data-gameon-myplay-fix]')){
+      const s2=d.createElement('script');
+      s2.src='/gameon-2.5-myplay-fix.js?v=1';
+      s2.dataset.gameonMyplayFix='1';
+      d.body.appendChild(s2);
+    }
   }catch(e){console.error('GameOn patch load failed',e)}
 });
 </script></body></html>
