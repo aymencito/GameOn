@@ -18,9 +18,15 @@ frame.addEventListener('load',()=>{
     }
     if(!d.querySelector('script[data-gameon-expiry-requests-fix]')){
       const s3=d.createElement('script');
-      s3.src='/gameon-2.5-expiry-requests-fix.js?v=1';
+      s3.src='/gameon-2.5-expiry-requests-fix.js?v=2';
       s3.dataset.gameonExpiryRequestsFix='1';
       d.body.appendChild(s3);
+    }
+    if(!d.querySelector('script[data-gameon-organiser-requests-v2]')){
+      const s4=d.createElement('script');
+      s4.src='/gameon-2.5-organiser-requests-fix-v2.js?v=1';
+      s4.dataset.gameonOrganiserRequestsV2='1';
+      d.body.appendChild(s4);
     }
   }catch(e){console.error('GameOn patch load failed',e)}
 });
