@@ -16,6 +16,12 @@ frame.addEventListener('load',()=>{
       s2.dataset.gameonMyplayFix='1';
       d.body.appendChild(s2);
     }
+    if(!d.querySelector('script[data-gameon-expiry-requests-fix]')){
+      const s3=d.createElement('script');
+      s3.src='/gameon-2.5-expiry-requests-fix.js?v=1';
+      s3.dataset.gameonExpiryRequestsFix='1';
+      d.body.appendChild(s3);
+    }
   }catch(e){console.error('GameOn patch load failed',e)}
 });
 </script></body></html>
