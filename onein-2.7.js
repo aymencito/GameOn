@@ -1,4 +1,4 @@
-// ONEIN 2.7 brand + UX polish. Runs after the stable GameOn 2.6 patch.
+// ONEIN 2.7 launch-candidate brand + UX polish. Runs after the stable GameOn 2.6 patch.
 (function(){
   document.title='ONEIN — Find your spot';
   const style=document.createElement('style');
@@ -13,6 +13,7 @@
   .choice h2{font-size:22px;letter-spacing:-.4px}.card,.fieldGroup{border-radius:22px}.btn{border-radius:16px}
   .nav{padding-bottom:max(14px,env(safe-area-inset-bottom));cursor:pointer}.nav div{padding:2px 0}.nav b{font-size:20px}
   .onein-kicker{display:inline-flex;align-items:center;gap:7px;border:1px solid #2b3a40;background:#101719;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:900;letter-spacing:.7px;color:#aebbc0}.onein-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(115,255,140,.7)}
+  .onein-trust{margin:24px 2px 6px;padding:14px 0 0;border-top:1px solid var(--line);color:#7f8d94;font-size:11px;line-height:1.5}.onein-trust a{color:#b8c4c9;text-decoration:none;font-weight:800}.onein-trust a+a{margin-left:14px}
   `;
   document.head.appendChild(style);
 
@@ -25,6 +26,10 @@
     const choices=home.querySelectorAll('.choice');
     if(choices[0]){choices[0].querySelector('h2').textContent='I NEED PLAYERS';choices[0].querySelector('.muted').textContent='Fill only the spots your group is missing.'}
     if(choices[1]){choices[1].querySelector('h2').textContent='FIND A SPOT';choices[1].querySelector('.muted').textContent='See nearby games with places open.'}
+    const trust=document.createElement('div');
+    trust.className='onein-trust';
+    trust.innerHTML='ONEIN is currently a Glasgow football beta. Arrange payment and final details directly with the organiser.<br><a href="/privacy.html" target="_top">Privacy</a><a href="/terms.html" target="_top">Beta terms</a>';
+    home.appendChild(trust);
   }
 
   const headings={find:'Find a spot',gameDetail:'Spot details',short:'Need players',posted:"You're live",mygames:'My Games',requests:'Player requests'};
@@ -34,7 +39,7 @@
   const findBtn=$('myplay')?.querySelector('.btn.green');if(findBtn)findBtn.textContent='＋ FIND A SPOT';
   const signedOut=$('signedOut')?.querySelector('.sub');if(signedOut)signedOut.textContent='Sign in with email. No password needed.';
 
-  // Brand every user-facing message without changing the proven 2.6 data flow.
+  // Brand every user-facing share without changing the proven 2.6 data flow.
   const oldShareCurrent=shareCurrent;
   shareCurrent=function(){
     if(!current)return oldShareCurrent();
@@ -60,4 +65,8 @@
   findGames=async function(){await oldFindGames();document.querySelectorAll('#openGames .btn.green').forEach(b=>b.textContent='VIEW SPOT')};
   const oldRenderOpenGames=renderOpenGames;
   renderOpenGames=function(){const r=oldRenderOpenGames();document.querySelectorAll('#openGames .btn.green').forEach(b=>b.textContent='VIEW SPOT');return r};
+
+  // Keep account screens visibly under the ONEIN brand.
+  const oldOpenMe=openMe;
+  openMe=async function(){await oldOpenMe();const card=$('profileCard');if(card&&!card.querySelector('.onein-account-note')){const n=document.createElement('div');n.className='muted onein-account-note';n.style.marginTop='10px';n.textContent='One ONEIN account lets you both join games and organise shortages.';card.appendChild(n)}};
 })();
