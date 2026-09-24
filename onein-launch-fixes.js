@@ -55,6 +55,55 @@
     }
   };
 
+  // A profile is required before requesting a spot. Validate the two required
+  // fields and confirm Supabase returned the saved row before navigating away.
+  saveProfile=async function(){
+    await restoreOneinSession;
+    const user=await getUser();
+    const firstName=$('firstName').value.trim();
+    const phone=$('phone').value.trim();
+    const area=$('area').value.trim();
+    const skillLevel=$('skill').value||null;
+    const button=$('profileForm')?.querySelector('.btn.green');
+    $('profileErr').innerHTML='';
+    if(!user){
+      $('profileErr').innerHTML='<div class="error">Your session has expired. Please sign in again.</div>';
+      return;
+    }
+    if(!firstName||!phone){
+      $('profileErr').innerHTML='<div class="error">Enter your first name and WhatsApp/mobile number.</div>';
+      return;
+    }
+    if(button?.disabled)return;
+    if(button){button.disabled=true;button.textContent='SAVING…'}
+    try{
+      const result=await sb.from('profiles').upsert({
+        id:user.id,
+        first_name:firstName,
+        phone,
+        area,
+        skill_level:skillLevel,
+        updated_at:new Date().toISOString()
+      },{onConflict:'id'}).select('id,first_name,phone,area,skill_level').single();
+      if(result.error)throw result.error;
+      if(!result.data||result.data.first_name!==firstName||result.data.phone!==phone){
+        throw new Error('The saved profile could not be verified.');
+      }
+      if(pendingAfterAuth){
+        const next=pendingAfterAuth;
+        pendingAfterAuth=null;
+        if(next==='short')return shortFlow();
+        if(next.startsWith('game:'))return openGame(next.split(':')[1]);
+      }
+      return openMe();
+    }catch(error){
+      console.error('ONEIN profile save failed',error);
+      $('profileErr').innerHTML='<div class="error">'+esc(error.message||'We could not save your profile. Please try again.')+'</div>';
+    }finally{
+      if(button){button.disabled=false;button.textContent='SAVE PROFILE'}
+    }
+  };
+
   const waNumber=(p)=>{let n=String(p||'').replace(/\D/g,'');if(n.startsWith('00'))n=n.slice(2);if(n.startsWith('0'))n='44'+n.slice(1);return n};
   const openExternal=(url)=>{try{window.top.location.href=url}catch(e){window.open(url,'_blank')}};
 
