@@ -1,5 +1,60 @@
 // ONEIN beta launch hardening. Loaded after gameon-2.6.js.
 (function(){
+  // The magic-link lands on the outer v2-6 page while the app runs inside an
+  // iframe. Restore the Supabase session explicitly before any screen checks
+  // authentication, then remove credentials from the address bar.
+  const restoreOneinSession=(async()=>{
+    try{
+      const topUrl=new URL(window.top.location.href);
+      const hash=new URLSearchParams(topUrl.hash.replace(/^#/,''));
+      const accessToken=hash.get('access_token');
+      const refreshToken=hash.get('refresh_token');
+      if(accessToken&&refreshToken){
+        const result=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+        if(result.error)throw result.error;
+        window.top.history.replaceState(null,'',topUrl.pathname+topUrl.search);
+      }
+      return (await sb.auth.getSession()).data.session?.user||null;
+    }catch(error){
+      console.error('ONEIN session restoration failed',error);
+      return null;
+    }
+  })();
+
+  const baseGetUser=getUser;
+  getUser=async function(){
+    await restoreOneinSession;
+    const session=await sb.auth.getSession();
+    if(session.data.session?.user)return session.data.session.user;
+    return baseGetUser();
+  };
+
+  // Keep every account surface in sync when Supabase refreshes or clears a
+  // session. This prevents the organiser form and Profile disagreeing.
+  sb.auth.onAuthStateChange((_event,session)=>{
+    if($('profile')?.classList.contains('active'))openProfile();
+    if(!session&&$('short')?.classList.contains('active'))openProfile();
+  });
+
+  // Surface unexpected save failures and prevent double submissions. The core
+  // flow still owns validation and the successful "You're live" state.
+  const basePostShortage=postShortage;
+  postShortage=async function(){
+    await restoreOneinSession;
+    const button=$('short')?.querySelector('.btn.red');
+    if(button?.disabled)return;
+    if(button){button.disabled=true;button.textContent='POSTING…'}
+    $('postErr').innerHTML='';
+    try{
+      await basePostShortage();
+    }catch(error){
+      console.error('ONEIN game creation failed',error);
+      $('postErr').innerHTML='<div class="error">We could not publish this game. Please try again.</div>';
+    }finally{
+      if(button){button.disabled=false;button.textContent='FIND MY PLAYERS'}
+    }
+  };
+
   const waNumber=(p)=>{let n=String(p||'').replace(/\D/g,'');if(n.startsWith('00'))n=n.slice(2);if(n.startsWith('0'))n='44'+n.slice(1);return n};
   const openExternal=(url)=>{try{window.top.location.href=url}catch(e){window.open(url,'_blank')}};
 
