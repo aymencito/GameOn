@@ -13,6 +13,9 @@
         const result=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
         if(result.error)throw result.error;
         window.top.history.replaceState(null,'',topUrl.pathname+topUrl.search);
+        // The wrapper forwarded the fragment into this same-origin iframe so
+        // Supabase could restore the session. Remove it here as well once used.
+        window.history.replaceState(null,'',window.location.pathname+window.location.search);
       }
       return (await sb.auth.getSession()).data.session?.user||null;
     }catch(error){
@@ -107,21 +110,22 @@
   const waNumber=(p)=>{let n=String(p||'').replace(/\D/g,'');if(n.startsWith('00'))n=n.slice(2);if(n.startsWith('0'))n='44'+n.slice(1);return n};
   const openExternal=(url)=>{try{window.top.location.href=url}catch(e){window.open(url,'_blank')}};
 
-  // WhatsApp must escape the iframe. UK 07 numbers are normalised to 447.
-  acceptWhats=async function(id,p,n){
-    const q=await sb.rpc('organiser_decide_request',{p_request_id:id,p_decision:'accepted'});
-    if(q.error){alert(q.error.message);return}
-    const phone=waNumber(p);
-    if(phone)openExternal('https://wa.me/'+phone+'?text='+encodeURIComponent(`Hi ${n}, you're in ⚽ See you at the game! — ONEIN`));
-    else alert('Player accepted. They have no WhatsApp/mobile number saved in ONEIN.');
-  };
+  const missingRpc=error=>/function|schema cache|could not find/i.test(String(error?.message||''));
 
-  const basePlayCard=playCard;
-  playCard=function(r,latest=false){
-    let html=basePlayCard(r,latest);
-    const phone=waNumber(r?.games?.organiser_phone);
-    if(phone) html=html.replace(/onclick="location\.href='https:\/\/wa\.me\/[^']*'"/g,`onclick="window.top.location.href='https://wa.me/${phone}'"`);
-    return html;
+  // WhatsApp must escape the iframe. The secure RPC returns contact details
+  // only after acceptance; the fallback keeps the live beta compatible until
+  // the security migration has been applied.
+  acceptWhats=async function(id,p,n){
+    let q=await sb.rpc('organiser_accept_request_secure',{p_request_id:id});
+    if(q.error&&missingRpc(q.error)){
+      q=await sb.rpc('organiser_decide_request',{p_request_id:id,p_decision:'accepted'});
+      if(q.error){alert(q.error.message);return}
+    }else if(q.error){alert(q.error.message);return}
+    const accepted=q.data?.[0]||{};
+    const name=accepted.player_name||n||'player';
+    const phone=waNumber(accepted.player_phone||p);
+    if(phone)openExternal('https://wa.me/'+phone+'?text='+encodeURIComponent(`Hi ${name}, you're in ⚽ See you at the game! — ONEIN`));
+    else alert('Player accepted. They have no WhatsApp/mobile number saved in ONEIN.');
   };
 
   const baseOpenRequests=openRequests;
@@ -136,4 +140,22 @@
     if(u){const p=await sb.from('profiles').select('first_name,phone').eq('id',u.id).maybeSingle();if(!p.data?.first_name||!p.data?.phone){pendingAfterAuth='game:'+id;openProfile();const form=$('profileForm');if(form&&!form.querySelector('.onein-profile-note'))form.insertAdjacentHTML('afterbegin','<div class="ok onein-profile-note"><b>Almost there.</b><br>Complete your profile to request this spot. Your name and WhatsApp number help the organiser confirm you.</div>');return}}
     return baseJoinGame(id);
   };
+
+  // Just-in-time privacy information beside the fields where contact data is
+  // collected. The database migration enforces the same sharing boundary.
+  const phoneInput=$('phone');
+  if(phoneInput){
+    phoneInput.maxLength=20;
+    phoneInput.autocomplete='tel';
+  }
+  const firstNameInput=$('firstName');
+  if(firstNameInput){
+    firstNameInput.maxLength=50;
+    firstNameInput.autocomplete='given-name';
+  }
+  const profileForm=$('profileForm');
+  if(profileForm&&!profileForm.querySelector('.onein-privacy-copy')){
+    const saveButton=profileForm.querySelector('.btn.green');
+    saveButton?.insertAdjacentHTML('beforebegin','<div class="phoneHint onein-privacy-copy" style="margin:10px 0 4px">Privacy: your name and level are shown to the organiser when you request a spot. Your phone number is released only after they accept you. An organiser\'s number is released only to accepted players.</div>');
+  }
 })();
